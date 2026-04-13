@@ -1,0 +1,250 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+struct Item {
+    int id, qty;
+    int index;
+    char name[50];
+    float price;
+    struct Item* next;
+};
+
+struct Item* head = NULL;
+
+struct Order {
+    int itemID, quantity;
+    struct Order* next;
+};
+
+struct Order *front = NULL, *rear = NULL;
+
+int totalSales[100] = {0};
+int itemCount = 0;
+
+// -------- CLEAR INPUT BUFFER --------
+void clearBuffer() {
+    while (getchar() != '\n');
+}
+
+// -------- SEARCH BY ID --------
+struct Item* searchByID(int id) {
+    struct Item* temp = head;
+    while (temp != NULL) {
+        if (temp->id == id)
+            return temp;
+        temp = temp->next;
+    }
+    return NULL;
+}
+
+// -------- ADD ITEM --------
+void addItem() {
+    struct Item* newItem = (struct Item*)malloc(sizeof(struct Item));
+
+    printf("Enter ID: ");
+    scanf("%d", &newItem->id);
+
+    if (searchByID(newItem->id) != NULL) {
+        printf("Item with this ID already exists!\n");
+        free(newItem);
+        clearBuffer();
+        return;
+    }
+
+    printf("Enter Name: ");
+    clearBuffer();
+    fgets(newItem->name, sizeof(newItem->name), stdin);
+    newItem->name[strcspn(newItem->name, "\n")] = '\0';
+
+    printf("Enter Quantity: ");
+    scanf("%d", &newItem->qty);
+
+    printf("Enter Price: ");
+    scanf("%f", &newItem->price);
+
+    newItem->index = itemCount++;
+    newItem->next = NULL;
+
+    if (head == NULL)
+        head = newItem;
+    else {
+        struct Item* temp = head;
+        while (temp->next != NULL)
+            temp = temp->next;
+        temp->next = newItem;
+    }
+
+    printf("Item added successfully!\n");
+}
+
+// -------- DISPLAY ITEMS --------
+void displayItems() {
+    struct Item* temp = head;
+
+    if (temp == NULL) {
+        printf("No items available!\n");
+        return;
+    }
+
+    while (temp != NULL) {
+        printf("ID:%d Name:%s Qty:%d Price:%.2f\n",
+               temp->id, temp->name, temp->qty, temp->price);
+        temp = temp->next;
+    }
+}
+
+// -------- SEARCH BY NAME --------
+void searchByName() {
+    char name[50];
+
+    printf("Enter item name: ");
+    clearBuffer();
+    fgets(name, sizeof(name), stdin);
+    name[strcspn(name, "\n")] = '\0';
+
+    struct Item* temp = head;
+
+    while (temp != NULL) {
+        if (strcmp(temp->name, name) == 0) {
+            printf("Found → ID:%d Qty:%d Price:%.2f\n",
+                   temp->id, temp->qty, temp->price);
+            return;
+        }
+        temp = temp->next;
+    }
+
+    printf("Item not found!\n");
+}
+
+// -------- DELETE ITEM --------
+void deleteItem() {
+    int id;
+
+    printf("Enter ID to delete: ");
+    scanf("%d", &id);
+
+    struct Item *temp = head, *prev = NULL;
+
+    while (temp != NULL && temp->id != id) {
+        prev = temp;
+        temp = temp->next;
+    }
+
+    if (temp == NULL) {
+        printf("Item not found!\n");
+        return;
+    }
+
+    if (prev == NULL)
+        head = temp->next;
+    else
+        prev->next = temp->next;
+
+    free(temp);
+    printf("Item deleted successfully!\n");
+}
+
+// -------- PLACE ORDER --------
+void placeOrder() {
+    struct Order* newOrder = (struct Order*)malloc(sizeof(struct Order));
+
+    printf("Enter Item ID: ");
+    scanf("%d", &newOrder->itemID);
+
+    printf("Enter Quantity: ");
+    scanf("%d", &newOrder->quantity);
+
+    if (newOrder->quantity <= 0) {
+        printf("Invalid quantity!\n");
+        free(newOrder);
+        return;
+    }
+
+    newOrder->next = NULL;
+
+    if (rear == NULL)
+        front = rear = newOrder;
+    else {
+        rear->next = newOrder;
+        rear = newOrder;
+    }
+
+    printf("Order placed successfully!\n");
+}
+
+// -------- PROCESS ORDER --------
+void processOrder() {
+    if (front == NULL) {
+        printf("No orders to process!\n");
+        return;
+    }
+
+    struct Order* temp = front;
+    struct Item* item = searchByID(temp->itemID);
+
+    if (item != NULL && item->qty >= temp->quantity) {
+        float bill = temp->quantity * item->price;
+        item->qty -= temp->quantity;
+
+        totalSales[item->index] += temp->quantity;
+
+        printf("Order processed!\n");
+        printf("Bill Amount: %.2f\n", bill);
+
+        if (item->qty <= 5)
+            printf("Low stock alert for %s\n", item->name);
+    } else {
+        printf("Order failed (Insufficient stock or item not found)\n");
+    }
+
+    front = front->next;
+    if (front == NULL)
+        rear = NULL;
+
+    free(temp);
+}
+
+// -------- SALES REPORT --------
+void showSales() {
+    struct Item* temp = head;
+
+    printf("\n--- Sales Report ---\n");
+
+    while (temp != NULL) {
+        printf("%s → Sold: %d\n", temp->name, totalSales[temp->index]);
+        temp = temp->next;
+    }
+}
+
+// -------- MAIN --------
+int main() {
+    int choice;
+
+    while (1) {
+        printf("\n===== MENU =====\n");
+        printf("1. Add Item\n");
+        printf("2. Display Items\n");
+        printf("3. Delete Item\n");
+        printf("4. Search Item by Name\n");
+        printf("5. Place Order\n");
+        printf("6. Process Order\n");
+        printf("7. Show Sales Report\n");
+        printf("8. Exit\n");
+
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1: addItem(); break;
+            case 2: displayItems(); break;
+            case 3: deleteItem(); break;
+            case 4: searchByName(); break;
+            case 5: placeOrder(); break;
+            case 6: processOrder(); break;
+            case 7: showSales(); break;
+            case 8: exit(0);
+            default: printf("Invalid choice!\n");
+        }
+    }
+}
